@@ -2,39 +2,21 @@ const slugify = require('slugify')
 const asyncHandler = require('express-async-handler');
 const Product = require('../models/productModel');
 const ApiError = require('../utils/ApiError')
-
+const ApiFeatures = require('../utils/apiFeatures')
  //@desc Get list of  products
   //@route GET /api/v1/products
   //@access Public
 
 exports.getProducts = asyncHandler (async (req, res)=>{
    
-   const queryStringObj ={...req.query};
-  const execludesFields =['page','limit','sort','fields'];
-   execludesFields.forEach((field)=> delete queryStringObj[field]);
-   console.log(req.query)
+   const documentsCounts = await Product.countDocuments();
+   const apiFeatures = new ApiFeatures(Product.find(),req.query).pagination(documentsCounts).filter().sort().limitFeilds().search('Products');
+  
  
- let queryStr = JSON.stringify(queryStringObj);
- queryStr =queryStr.replace(/(gte|gt|lte|lt)\b/g,match => `$${match}`);
- console.log(JSON.parse(queryStr));
- //pagination   
-   const page = req.query.page *1 || 1;
-   const limit =req.query.limit*1||50;
-   const skip = (page -1) *limit;
-   let mongooseQuery =  Product.find(JSON.parse(queryStr))
-   .skip(skip)
-   .limit(limit)
-   .populate({path: 'category' , select:'name-_id'});
-   //sorting 
-   if(req.query.sort){
-      const sortBy = req.query.sort.split(',').join(' ')
-      mongooseQuery = mongooseQuery.sort(sortBy);
-   } else{
-      mongooseQuery = mongooseQuery.sort('-createdAt');
-   }
    // execute query
+   const{mongooseQuery,paginationResult}= apiFeatures;
    const products = await mongooseQuery;
-   res.status(200).json({result: products.length, page,data: products});
+   res.status(200).json({result: products.length,paginationResult, data: products});
    }); 
   //@desc Get specific product by id
   //@route Get /api/v1/products/:id

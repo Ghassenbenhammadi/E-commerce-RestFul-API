@@ -3,7 +3,7 @@ const asyncHandler = require('express-async-handler');
 const subCategoryModel = require('../models/subCategoryModel');
 const ApiError = require('../utils/ApiError');
 
-
+const ApiFeatures = require('../utils/apiFeatures');
 
 exports.setCategoryIdToBody =(req, res,next) =>{
    // Nested route
@@ -24,17 +24,15 @@ exports.createFilterObj = (req,res,next)=>{
   //@access Public
 
   exports.getSubCategories = asyncHandler (async (req, res)=>{
-    const page = req.query.page *1 || 1;
-    const limit =req.query.limit*1|| 10;
-    const skip = (page -1) *limit;
-
-    
-    const SubCategories = await subCategoryModel
-    .find(req.filterObj)
-    .skip(skip)
-    .limit(limit);
+   const documentsCounts = await subCategoryModel.countDocuments();
+   const apiFeatures = new ApiFeatures(subCategoryModel.find(),req.query).pagination(documentsCounts).filter().sort().limitFeilds().search('Products');
+  
+ 
+   // execute query
+   const{mongooseQuery,paginationResult}= apiFeatures;
+   const SubCategories = await mongooseQuery;
    //  .populate({path:'category',select: 'name -_id'});
-    res.status(200).json({result: SubCategories.length, page,data: SubCategories});
+    res.status(200).json({result: SubCategories.length, paginationResult,data: SubCategories});
     }); 
    //@desc Get specific subcategory by id
    //@route Get /api/v1/subcategories/:id
